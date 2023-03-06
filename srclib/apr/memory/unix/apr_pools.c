@@ -32,6 +32,8 @@
 #include "apr_want.h"
 #include "apr_env.h"
 
+#include "stdio.h"
+
 #if APR_HAVE_STDLIB_H
 #include <stdlib.h>     /* for malloc, free and abort */
 #endif
@@ -291,6 +293,8 @@ apr_memnode_t *allocator_alloc(apr_allocator_t *allocator, apr_size_t in_size)
     apr_memnode_t *node, **ref;
     apr_size_t max_index;
     apr_size_t size, i, index;
+
+    fprintf(stderr, "allocator_alloc(%ld)\n", in_size);
 
     /* Round up the block size to the next boundary, but always
      * allocate at least a certain size (MIN_ALLOC).
@@ -559,6 +563,25 @@ struct debug_node_t {
  * Look at apr_pool_create_ex() and apr_pool_destroy()
  * to see how it is used.
  */
+#ifdef R2_SHIM_ALLOCATOR
+struct apr_pool_t {
+    apr_pool_t           *parent;
+    apr_pool_t           *child;
+    apr_pool_t           *sibling;
+    apr_pool_t          **ref;
+    cleanup_t            *cleanups;
+    cleanup_t            *free_cleanups;
+    apr_allocator_t      *allocator;
+    struct process_chain *subprocesses;
+    apr_abortfunc_t       abort_fn;
+    apr_hash_t           *user_data;
+    const char           *tag;
+    apr_memnode_t        *active;
+    apr_memnode_t        *self; /* The node containing the pool itself */
+    char                 *self_first_avail;
+    cleanup_t            *pre_cleanups;
+};
+#else
 struct apr_pool_t {
     apr_pool_t           *parent;
     apr_pool_t           *child;
@@ -604,6 +627,7 @@ struct apr_pool_t {
     apr_os_thread_t       in_use_by;
 #endif /* APR_POOL_CONCURRENCY_CHECK */
 };
+#endif
 
 #define SIZEOF_POOL_T       APR_ALIGN_DEFAULT(sizeof(apr_pool_t))
 
@@ -812,6 +836,8 @@ APR_DECLARE(void *) apr_palloc(apr_pool_t *pool, apr_size_t in_size)
     apr_memnode_t *active, *node;
     void *mem;
     apr_size_t size, free_index;
+
+    fprintf(stderr, "apr_palloc(%ld)\n", in_size);
 
     pool_concurrency_set_used(pool);
     size = APR_ALIGN_DEFAULT(in_size);
