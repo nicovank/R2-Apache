@@ -50,18 +50,6 @@
 extern "C" {
 #endif
 
-#ifdef R2_SHIM_ALLOCATOR
-#ifdef APR_POOL_DEBUG
-#error "The shim is not supported with APR_POOL_DEBUG enabled."
-#endif
-#ifdef NETWARE
-#error "The shim is not supported with NETWARE enabled."
-#endif
-#ifdef APR_POOL_CONCURRENCY_CHECK
-#error "The shim is not supported with APR_POOL_CONCURRENCY_CHECK enabled."
-#endif
-#endif
-
 /**
  * @defgroup apr_pools Memory Pool Functions
  * @ingroup APR 
@@ -240,7 +228,6 @@ APR_DECLARE(apr_status_t) apr_pool_create_unmanaged_ex(apr_pool_t **newpool,
                                                    apr_allocator_t *allocator)
                           __attribute__((nonnull(1)));
 
-#ifndef R2_SHIM_ALLOCATOR
 /**
  * Debug version of apr_pool_create_ex.
  * @param newpool @see apr_pool_create.
@@ -310,7 +297,6 @@ APR_DECLARE(apr_status_t) apr_pool_create_unmanaged_ex_debug(apr_pool_t **newpoo
                                   APR_POOL__FILE_LINE__)
 
 #endif
-#endif
 
 /**
  * Create a new pool.
@@ -378,7 +364,6 @@ APR_DECLARE(apr_allocator_t *) apr_pool_allocator_get(apr_pool_t *pool)
  */
 APR_DECLARE(void) apr_pool_clear(apr_pool_t *p) __attribute__((nonnull(1)));
 
-#ifndef R2_SHIM_ALLOCATOR
 /**
  * Debug version of apr_pool_clear.
  * @param p See: apr_pool_clear.
@@ -400,7 +385,6 @@ APR_DECLARE(void) apr_pool_clear_debug(apr_pool_t *p,
 #define apr_pool_clear(p) \
     apr_pool_clear_debug(p, APR_POOL__FILE_LINE__)
 #endif
-#endif
 
 /**
  * Destroy the pool. This takes similar action as apr_pool_clear() and then
@@ -410,7 +394,6 @@ APR_DECLARE(void) apr_pool_clear_debug(apr_pool_t *p,
  */
 APR_DECLARE(void) apr_pool_destroy(apr_pool_t *p) __attribute__((nonnull(1)));
 
-#ifndef R2_SHIM_ALLOCATOR
 /**
  * Debug version of apr_pool_destroy.
  * @param p See: apr_pool_destroy.
@@ -432,7 +415,6 @@ APR_DECLARE(void) apr_pool_destroy_debug(apr_pool_t *p,
 #define apr_pool_destroy(p) \
     apr_pool_destroy_debug(p, APR_POOL__FILE_LINE__)
 #endif
-#endif
 
 
 /*
@@ -451,7 +433,6 @@ APR_DECLARE(void *) apr_palloc(apr_pool_t *p, apr_size_t size)
 #endif
                     __attribute__((nonnull(1)));
 
-#ifndef R2_SHIM_ALLOCATOR
 /**
  * Debug version of apr_palloc
  * @param p See: apr_palloc
@@ -471,7 +452,6 @@ APR_DECLARE(void *) apr_palloc_debug(apr_pool_t *p, apr_size_t size,
 #define apr_palloc(p, size) \
     apr_palloc_debug(p, size, APR_POOL__FILE_LINE__)
 #endif
-#endif
 
 /**
  * Allocate a block of memory from a pool and set all of the memory to 0
@@ -485,7 +465,6 @@ APR_DECLARE(void *) apr_pcalloc(apr_pool_t *p, apr_size_t size);
 #define apr_pcalloc(p, size) memset(apr_palloc(p, size), 0, size)
 #endif
 
-#ifndef R2_SHIM_ALLOCATOR
 /**
  * Debug version of apr_pcalloc
  * @param p See: apr_pcalloc
@@ -501,7 +480,6 @@ APR_DECLARE(void *) apr_pcalloc_debug(apr_pool_t *p, apr_size_t size,
 #if APR_POOL_DEBUG
 #define apr_pcalloc(p, size) \
     apr_pcalloc_debug(p, size, APR_POOL__FILE_LINE__)
-#endif
 #endif
 
 

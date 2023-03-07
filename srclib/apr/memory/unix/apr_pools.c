@@ -32,8 +32,6 @@
 #include "apr_want.h"
 #include "apr_env.h"
 
-#include "stdio.h"
-
 #if APR_HAVE_STDLIB_H
 #include <stdlib.h>     /* for malloc, free and abort */
 #endif
