@@ -84,8 +84,12 @@ int apr_running_on_valgrind = 0;
  * XXX: machines with large pagesize, but currently the sink is assumed
  * XXX: to be index 0, so MIN_ALLOC must be at least two pages.
  */
+#ifdef R2_SHIM_ALLOCATOR
+#define MAX_INDEX   1
+#else
 #define MIN_ALLOC (2 * BOUNDARY_SIZE)
 #define MAX_INDEX   20
+#endif
 
 #if APR_ALLOCATOR_USES_MMAP && defined(_SC_PAGESIZE)
 static unsigned int boundary_index;
@@ -246,6 +250,7 @@ APR_DECLARE(apr_pool_t *) apr_allocator_owner_get(apr_allocator_t *allocator)
 APR_DECLARE(void) apr_allocator_max_free_set(apr_allocator_t *allocator,
                                              apr_size_t in_size)
 {
+#ifndef R2_SHIM_ALLOCATOR
     apr_size_t max_free_index;
     apr_size_t size = in_size;
 
@@ -259,6 +264,7 @@ APR_DECLARE(void) apr_allocator_max_free_set(apr_allocator_t *allocator,
         allocator->current_free_index = max_free_index;
 
     allocator_unlock(allocator);
+#endif
 }
 
 static APR_INLINE
@@ -266,6 +272,9 @@ apr_size_t allocator_align(apr_size_t in_size)
 {
     apr_size_t size = in_size;
 
+#ifdef R2_SHIM_ALLOCATOR
+    return size + APR_MEMNODE_T_SIZE;
+#else
     /* Round up the block size to the next boundary, but always
      * allocate at least a certain size (MIN_ALLOC).
      */
@@ -278,6 +287,7 @@ apr_size_t allocator_align(apr_size_t in_size)
     }
 
     return size;
+#endif
 }
 
 APR_DECLARE(apr_size_t) apr_allocator_align(apr_allocator_t *allocator,
@@ -294,8 +304,6 @@ apr_memnode_t *allocator_alloc(apr_allocator_t *allocator, apr_size_t in_size)
     apr_size_t max_index;
     apr_size_t size, i, index;
 
-    fprintf(stderr, "allocator_alloc(%ld)\n", in_size);
-
     /* Round up the block size to the next boundary, but always
      * allocate at least a certain size (MIN_ALLOC).
      */
@@ -304,6 +312,7 @@ apr_memnode_t *allocator_alloc(apr_allocator_t *allocator, apr_size_t in_size)
         return NULL;
     }
 
+#ifndef R2_SHIM_ALLOCATOR
     /* Find the index for this node size by
      * dividing its size by the boundary size
      */
@@ -392,6 +401,7 @@ apr_memnode_t *allocator_alloc(apr_allocator_t *allocator, apr_size_t in_size)
 
         allocator_unlock(allocator);
     }
+#endif
 
     /* If we haven't got a suitable node, malloc a new one
      * and initialize it.
@@ -433,6 +443,9 @@ void allocator_free(apr_allocator_t *allocator, apr_memnode_t *node)
     apr_size_t index, max_index;
     apr_size_t max_free_index, current_free_index;
 
+#ifdef R2_SHIM_ALLOCATOR
+    freelist = node;
+#else
     allocator_lock(allocator);
 
     max_index = allocator->max_index;
@@ -485,6 +498,7 @@ void allocator_free(apr_allocator_t *allocator, apr_memnode_t *node)
     allocator->current_free_index = current_free_index;
 
     allocator_unlock(allocator);
+#endif
 
     while (freelist != NULL) {
         node = freelist;
@@ -837,8 +851,6 @@ APR_DECLARE(void *) apr_palloc(apr_pool_t *pool, apr_size_t in_size)
     void *mem;
     apr_size_t size, free_index;
 
-    fprintf(stderr, "apr_palloc(%ld)\n", in_size);
-
     pool_concurrency_set_used(pool);
     size = APR_ALIGN_DEFAULT(in_size);
 #if HAVE_VALGRIND
@@ -1085,8 +1097,12 @@ APR_DECLARE(apr_status_t) apr_pool_create_ex(apr_pool_t **newpool,
     if (allocator == NULL)
         allocator = parent->allocator;
 
+#ifdef R2_SHIM_ALLOCATOR
+    if ((node = allocator_alloc(allocator, SIZEOF_POOL_T)) == NULL) {
+#else
     if ((node = allocator_alloc(allocator,
                                 MIN_ALLOC - APR_MEMNODE_T_SIZE)) == NULL) {
+#endif
         if (abort_fn)
             abort_fn(APR_ENOMEM);
 
@@ -1183,8 +1199,12 @@ APR_DECLARE(apr_status_t) apr_pool_create_unmanaged_ex(apr_pool_t **newpool,
         memset(pool_allocator, 0, SIZEOF_ALLOCATOR_T);
         pool_allocator->max_free_index = APR_ALLOCATOR_MAX_FREE_UNLIMITED;
     }
+#ifdef R2_SHIM_ALLOCATOR
+    if ((node = allocator_alloc(pool_allocator, SIZEOF_POOL_T)) == NULL) {
+#else
     if ((node = allocator_alloc(pool_allocator,
                                 MIN_ALLOC - APR_MEMNODE_T_SIZE)) == NULL) {
+#endif
         if (abort_fn)
             abort_fn(APR_ENOMEM);
 
