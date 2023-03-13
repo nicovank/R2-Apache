@@ -83,7 +83,7 @@ int apr_running_on_valgrind = 0;
  * XXX: to be index 0, so MIN_ALLOC must be at least two pages.
  */
 #ifdef R2_SHIM_ALLOCATOR
-#define MAX_INDEX   1
+#define MAX_INDEX 0
 #else
 #define MIN_ALLOC (2 * BOUNDARY_SIZE)
 #define MAX_INDEX   20
@@ -483,12 +483,16 @@ void allocator_free(apr_allocator_t *allocator, apr_memnode_t *node)
             /* This node is too large to keep in a specific size bucket,
              * just add it to the sink (at index 0).
              */
+#ifdef R2_SHIM_ALLOCATOR
+            free(node);
+#else
             node->next = allocator->free[0];
             allocator->free[0] = node;
             if (current_free_index >= index + 1)
                 current_free_index -= index + 1;
             else
                 current_free_index = 0;
+#endif
         }
     } while ((node = next) != NULL);
 
